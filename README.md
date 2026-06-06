@@ -171,6 +171,23 @@ export default defineConfig({
 Positional patterns on the CLI override `include`. If neither is given,
 `**/*.md` is used.
 
+## Releasing
+
+Releases are automated with [tagpr](https://github.com/Songmu/tagpr) +
+`npm publish` (`.github/workflows/tagpr.yml`):
+
+1. Push commits to `main`. tagpr opens/updates a **Release PR** that bumps the
+   version in `package.json` and updates `CHANGELOG.md`.
+2. Label the Release PR `minor` / `major` to control the bump (default: patch).
+3. Merge the Release PR. tagpr creates the `vX.Y.Z` tag + GitHub Release, and
+   the same workflow run publishes the package to npm.
+
+One-time setup:
+
+- Add an npm **automation token** as the `NPM_TOKEN` repository secret.
+- Settings → Actions → General → enable
+  "Allow GitHub Actions to create and approve pull requests".
+
 ## License
 
 MIT
