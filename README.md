@@ -193,16 +193,23 @@ One-time setup:
    npm login
    npm publish --access public
    ```
-2. On npmjs.com → the package → **Settings → Trusted Publisher → GitHub
+2. GitHub → repo **Settings → Environments → New environment** named
+   `release`. Optionally add protection rules (e.g. required reviewers) so a
+   publish waits for manual approval. The `publish` job runs in this
+   environment.
+3. On npmjs.com → the package → **Settings → Trusted Publisher → GitHub
    Actions**, set:
    - Organization or user: `yukyu30`
    - Repository: `fluorite`
    - Workflow filename: `tagpr.yml`
-   - Environment: *(leave empty)*
-3. GitHub → Settings → Actions → General → enable
+   - Environment: `release` *(must match step 2)*
+4. GitHub → Settings → Actions → General → enable
    "Allow GitHub Actions to create and approve pull requests" (for tagpr).
 
 After that, every merged Release PR publishes automatically with no token.
+The `tagpr` job maintains the Release PR on every push to `main`; only the
+separate `publish` job is gated by the `release` environment, so protection
+rules apply to publishing alone.
 
 ## License
 

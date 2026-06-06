@@ -17,7 +17,8 @@ jobs:
       contents: write # create tags / releases and push the release PR
       pull-requests: write # create / update the release PR
       issues: read # read labels for version bump detection
-      id-token: write # npm trusted publishing (OIDC) + provenance
+    outputs:
+      tag: ${{ steps.tagpr.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,13 +39,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Trusted publishing (OIDC) needs npm >= 11.5.1; runners ship npm 10.
-      - name: Upgrade npm for trusted publishing
-        if: steps.tagpr.outputs.tag != ''
-        run: npm install -g npm@latest
+  # Separate, environment-gated job so protection rules apply only to publishing
+  # (not to tagpr's release-PR maintenance on every push to main).
+  publish:
+    needs: tagpr
+    if: needs.tagpr.outputs.tag != '' # only when the release PR was just merged
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://www.npmjs.com/package/@yukyu30/fluorite
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) + provenance
+    steps:
+      - uses: actions/checkout@v4
 
-      # Runs only on the push that tagpr just tagged (release PR merged).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; runners ship npm 10.
+      - run: npm install -g npm@latest
+      - run: npm ci
+
       # No NPM_TOKEN: auth is via OIDC; provenance is generated automatically.
-      - name: Publish to npm
-        if: steps.tagpr.outputs.tag != ''
-        run: npm publish --access public
+      # `npm publish` runs the build via prepublishOnly.
+      - run: npm publish --access public
