@@ -11,7 +11,7 @@ title: "これはタイトルです"
 ```
 
 ```ts
-import { check } from "fluorite";
+import { check } from "@yukyu30/fluorite";
 
 const result = check(markdown, (fm) => {
   fm.key("title").required().type("string").lengthMin(10);
@@ -28,7 +28,7 @@ reason) so you can collect and report them as red/green.
 ## Install
 
 ```sh
-npm install fluorite
+npm install @yukyu30/fluorite
 ```
 
 ## Library API
@@ -156,7 +156,7 @@ Options:
 
 ```js
 // fluorite.config.mjs
-import { defineConfig } from "fluorite";
+import { defineConfig } from "@yukyu30/fluorite";
 
 export default defineConfig({
   include: ["docs/**/*.md"],
