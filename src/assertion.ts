@@ -133,6 +133,55 @@ export class KeyAssertion {
     );
   }
 
+  /**
+   * Assert the value is an array whose every element is in `allowed` (enum).
+   *
+   * Designed for catching tag notation drift: define the canonical set once
+   * and any stray / mistyped value is reported.
+   *
+   * ```ts
+   * fm.key("tags").subsetOf(["ok", "release", "blog"]);
+   * ```
+   */
+  subsetOf(allowed: readonly unknown[]): this {
+    const v = this.resolved;
+    const isArray = Array.isArray(v);
+    const invalid = isArray
+      ? v.filter((el) => !allowed.some((a) => deepEqual(el, a)))
+      : [];
+    return this.record(
+      "subsetOf",
+      isArray && invalid.length === 0,
+      (neg) => {
+        if (!isArray) return `should be an array of values from ${display(allowed)}`;
+        if (neg) return `should contain values outside ${display(allowed)}`;
+        return invalid.length
+          ? `all items should be one of ${display(allowed)} (invalid: ${display(invalid)})`
+          : `all items should be one of ${display(allowed)}`;
+      },
+      allowed,
+    );
+  }
+
+  /** Alias of {@link subsetOf}. */
+  only(allowed: readonly unknown[]): this {
+    return this.subsetOf(allowed);
+  }
+
+  /**
+   * Apply matchers to every element of an array value.
+   *
+   * ```ts
+   * fm.key("tags").each.oneOf(["ok", "release"]);
+   * fm.key("tags").each.matches(/^[a-z0-9-]+$/);
+   * ```
+   */
+  get each(): EachAssertion {
+    const negated = this.#negated;
+    this.#negated = false;
+    return new EachAssertion(this.recorder, this.key, this.resolved, negated);
+  }
+
   /** Assert the value is one of `allowed` (enum). */
   oneOf(allowed: readonly unknown[]): this {
     return this.record(
@@ -246,6 +295,104 @@ export class KeyAssertion {
           ? `length should be > ${n} (was ${len ?? "n/a"})`
           : `length should be <= ${n} (was ${len ?? "n/a"})`,
       n,
+    );
+  }
+}
+
+/**
+ * Applies matchers to every element of an array frontmatter value.
+ *
+ * Obtained via {@link KeyAssertion.each}. Each terminal matcher records a
+ * single {@link RuleResult}: it passes only when the value is an array and
+ * every element satisfies the matcher; failures list the offending elements.
+ */
+export class EachAssertion {
+  #negated: boolean;
+
+  constructor(
+    private readonly recorder: Recorder,
+    private readonly key: string,
+    private readonly value: unknown,
+    negated: boolean,
+  ) {
+    this.#negated = negated;
+  }
+
+  /** Negate the next matcher in the chain. */
+  get not(): this {
+    this.#negated = true;
+    return this;
+  }
+
+  private record(
+    rule: string,
+    perElement: (el: unknown) => boolean,
+    describe: (negated: boolean, invalid: unknown[], isArray: boolean) => string,
+    expected?: unknown,
+  ): this {
+    const negated = this.#negated;
+    this.#negated = false;
+    const isArray = Array.isArray(this.value);
+    const invalid = isArray
+      ? (this.value as unknown[]).filter((el) => !perElement(el))
+      : [];
+    const rawPass = isArray && invalid.length === 0;
+    // A non-array can never satisfy a per-element check, even when negated.
+    const ok = isArray ? (negated ? !rawPass : rawPass) : false;
+    this.recorder.push({
+      key: this.key,
+      rule: `each.${rule}`,
+      ok,
+      negated,
+      message: describe(negated, invalid, isArray),
+      value: this.value === MISSING ? undefined : this.value,
+      expected,
+    });
+    return this;
+  }
+
+  /** Every element must be one of `allowed` (enum over array contents). */
+  oneOf(allowed: readonly unknown[]): this {
+    return this.record(
+      "oneOf",
+      (el) => allowed.some((a) => deepEqual(el, a)),
+      (neg, invalid, isArray) =>
+        !isArray
+          ? `should be an array of values from ${display(allowed)}`
+          : neg
+            ? `every item should be outside ${display(allowed)}`
+            : `every item should be one of ${display(allowed)}${invalid.length ? ` (invalid: ${display(invalid)})` : ""}`,
+      allowed,
+    );
+  }
+
+  /** Every element must be of the given type. */
+  type(expected: ValueType): this {
+    return this.record(
+      "type",
+      (el) => valueType(el) === expected,
+      (neg, invalid, isArray) =>
+        !isArray
+          ? `should be an array of ${expected}`
+          : neg
+            ? `every item should not be of type ${expected}`
+            : `every item should be of type ${expected}${invalid.length ? ` (invalid: ${display(invalid)})` : ""}`,
+      expected,
+    );
+  }
+
+  /** Every (string) element must match the pattern. */
+  matches(pattern: RegExp): this {
+    return this.record(
+      "matches",
+      (el) => typeof el === "string" && pattern.test(el),
+      (neg, invalid, isArray) =>
+        !isArray
+          ? `should be an array of strings matching ${pattern}`
+          : neg
+            ? `every item should not match ${pattern}`
+            : `every item should match ${pattern}${invalid.length ? ` (invalid: ${display(invalid)})` : ""}`,
+      pattern.source,
     );
   }
 }

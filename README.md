@@ -83,6 +83,14 @@ next** matcher, then resets.
 - `hasAll([...])` — contains every item
 - `hasAny([...])` — contains at least one item
 
+**Enum / array contents** — catch tag notation drift
+
+- `subsetOf([...])` / `only([...])` — value is an array whose every element is
+  in the allowed set; failures list the offending (typo'd) values
+- `each.oneOf([...])` — same as `subsetOf`, via the per-element accessor
+- `each.type(t)` — every element is of type `t`
+- `each.matches(regexp)` — every (string) element matches the pattern
+
 **Length (arrays & strings)**
 
 - `length(n)` — length equals `n`
@@ -95,6 +103,27 @@ check(source, (fm) => {
   fm.key("slug").matches(/^[a-z0-9-]+$/);
   fm.key("tags").type("array").hasAll(["blog"]).not.has("ng");
   fm.key("summary").lengthMin(20).lengthMax(160);
+});
+```
+
+### Defining a tag enum
+
+Tags drift easily (`Blog` vs `blog`, stray `ng`). Define the canonical
+vocabulary once and `subsetOf` flags anything outside it — the failure names
+the exact offending values:
+
+```ts
+const TAGS = ["ok", "release", "blog", "news"];
+
+check(source, (fm) => {
+  fm.key("tags").type("array").subsetOf(TAGS);
+});
+// tags: ["ok", "Blog", "ng"]
+// → all items should be one of [...] (invalid: ["Blog","ng"])
+
+// Or enforce a notation rule instead of a fixed list:
+check(source, (fm) => {
+  fm.key("tags").each.matches(/^[a-z0-9-]+$/); // lowercase kebab-case only
 });
 ```
 
