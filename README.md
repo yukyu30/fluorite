@@ -1,5 +1,7 @@
 # fluorite
 
+**English** · [日本語](./README.ja.md)
+
 Inspect and validate Markdown **frontmatter** with a readable, chainable DSL —
 usable as a **library** and a **CLI**.
 
