@@ -1,0 +1,47 @@
+name: tagpr
+
+on:
+  push:
+    branches:
+      - main
+
+# Avoid overlapping release runs.
+concurrency:
+  group: tagpr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tagpr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create tags / releases and push the release PR
+      pull-requests: write # create / update the release PR
+      issues: read # read labels for version bump detection
+      id-token: write # npm publish provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tagpr needs full history + tags
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      # Maintains the release PR; on merge, tags and creates a GitHub Release.
+      - id: tagpr
+        uses: Songmu/tagpr@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Runs only on the push that tagpr just tagged (i.e. release PR merged).
+      - name: Publish to npm
+        if: steps.tagpr.outputs.tag != ''
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

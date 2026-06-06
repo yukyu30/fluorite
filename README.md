@@ -11,7 +11,7 @@ title: "これはタイトルです"
 ```
 
 ```ts
-import { check } from "fluorite";
+import { check } from "@yukyu30/fluorite";
 
 const result = check(markdown, (fm) => {
   fm.key("title").required().type("string").lengthMin(10);
@@ -28,7 +28,7 @@ reason) so you can collect and report them as red/green.
 ## Install
 
 ```sh
-npm install fluorite
+npm install @yukyu30/fluorite
 ```
 
 ## Library API
@@ -156,7 +156,7 @@ Options:
 
 ```js
 // fluorite.config.mjs
-import { defineConfig } from "fluorite";
+import { defineConfig } from "@yukyu30/fluorite";
 
 export default defineConfig({
   include: ["docs/**/*.md"],
@@ -170,6 +170,23 @@ export default defineConfig({
 
 Positional patterns on the CLI override `include`. If neither is given,
 `**/*.md` is used.
+
+## Releasing
+
+Releases are automated with [tagpr](https://github.com/Songmu/tagpr) +
+`npm publish` (`.github/workflows/tagpr.yml`):
+
+1. Push commits to `main`. tagpr opens/updates a **Release PR** that bumps the
+   version in `package.json` and updates `CHANGELOG.md`.
+2. Label the Release PR `minor` / `major` to control the bump (default: patch).
+3. Merge the Release PR. tagpr creates the `vX.Y.Z` tag + GitHub Release, and
+   the same workflow run publishes the package to npm.
+
+One-time setup:
+
+- Add an npm **automation token** as the `NPM_TOKEN` repository secret.
+- Settings → Actions → General → enable
+  "Allow GitHub Actions to create and approve pull requests".
 
 ## License
 

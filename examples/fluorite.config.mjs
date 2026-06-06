@@ -1,4 +1,4 @@
-import { defineConfig } from "fluorite";
+import { defineConfig } from "@yukyu30/fluorite";
 
 // Canonical tag vocabulary — anything outside this set is a typo / drift.
 const TAGS = ["ok", "release", "blog", "news"];
