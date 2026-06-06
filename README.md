@@ -171,6 +171,33 @@ export default defineConfig({
 Positional patterns on the CLI override `include`. If neither is given,
 `**/*.md` is used.
 
+## Claude Code skill
+
+The package ships a [Claude Code](https://claude.com/claude-code) **skill** at
+`skills/fluorite/SKILL.md` so an agent can author and review fluorite rules,
+configs, and CLI invocations for you. It is included in the published tarball,
+so once `@yukyu30/fluorite` is installed you can wire it up from
+`node_modules`.
+
+Install it for a single project:
+
+```sh
+mkdir -p .claude/skills
+cp -r node_modules/@yukyu30/fluorite/skills/fluorite .claude/skills/fluorite
+# or symlink to track upgrades automatically:
+ln -s ../../node_modules/@yukyu30/fluorite/skills/fluorite .claude/skills/fluorite
+```
+
+Or install it globally for every project:
+
+```sh
+cp -r node_modules/@yukyu30/fluorite/skills/fluorite ~/.claude/skills/fluorite
+```
+
+Claude Code discovers the skill by its `name` / `description` frontmatter and
+loads it when you ask it to validate Markdown frontmatter or work with
+fluorite.
+
 ## Releasing
 
 Releases are automated with [tagpr](https://github.com/Songmu/tagpr) +
