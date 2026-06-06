@@ -182,11 +182,27 @@ Releases are automated with [tagpr](https://github.com/Songmu/tagpr) +
 3. Merge the Release PR. tagpr creates the `vX.Y.Z` tag + GitHub Release, and
    the same workflow run publishes the package to npm.
 
+Publishing uses npm **trusted publishing (OIDC)** — no `NPM_TOKEN` secret, and
+provenance is attached automatically.
+
 One-time setup:
 
-- Add an npm **automation token** as the `NPM_TOKEN` repository secret.
-- Settings → Actions → General → enable
-  "Allow GitHub Actions to create and approve pull requests".
+1. **First publish** (the package must exist before a trusted publisher can be
+   attached). From your machine:
+   ```sh
+   npm login
+   npm publish --access public
+   ```
+2. On npmjs.com → the package → **Settings → Trusted Publisher → GitHub
+   Actions**, set:
+   - Organization or user: `yukyu30`
+   - Repository: `fluorite`
+   - Workflow filename: `tagpr.yml`
+   - Environment: *(leave empty)*
+3. GitHub → Settings → Actions → General → enable
+   "Allow GitHub Actions to create and approve pull requests" (for tagpr).
+
+After that, every merged Release PR publishes automatically with no token.
 
 ## License
 
