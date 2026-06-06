@@ -66,11 +66,30 @@ describe("check — collects results without throwing", () => {
   });
 });
 
+describe("check — passing case", () => {
+  it("returns ok with no failures and the parsed data", () => {
+    const result = check(SAMPLE, (fm) => {
+      fm.key("title").required().type("string").lengthMin(9);
+      fm.key("tags").type("array").has("ok");
+    });
+    expect(result.ok).toBe(true);
+    expect(result.failures).toHaveLength(0);
+    expect(result.data).toEqual({ tags: ["ok", "ng"], title: "これはタイトルです" });
+  });
+});
+
 describe("checkData", () => {
   it("runs rules against pre-parsed data", () => {
     const result = checkData({ title: "hi" }, (fm) => {
       fm.key("title").lengthMin(10);
     });
     expect(result.ok).toBe(false);
+  });
+
+  it("passes when every rule holds", () => {
+    const result = checkData({ title: "long enough title" }, (fm) => {
+      fm.key("title").required().lengthMin(10);
+    });
+    expect(result.ok).toBe(true);
   });
 });
