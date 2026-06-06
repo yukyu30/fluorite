@@ -1,1 +1,8 @@
 # Changelog
+
+## [v0.1.0](https://github.com/yukyu30/fluorite/commits/v0.1.0) - 2026-06-06
+
+- Add Claude Code GitHub Workflow by @yukyu30 in https://github.com/yukyu30/fluorite/pull/2
+- Set up automated releases and publish as scoped package by @yukyu30 in https://github.com/yukyu30/fluorite/pull/1
+- Switch npm publish to trusted publishing (OIDC) by @yukyu30 in https://github.com/yukyu30/fluorite/pull/3
+- Gate npm publish behind a GitHub Environment (release) by @yukyu30 in https://github.com/yukyu30/fluorite/pull/4
