@@ -1,0 +1,57 @@
+{
+  "name": "fluorite",
+  "version": "0.1.0",
+  "description": "Inspect and validate Markdown frontmatter with a readable, chainable DSL — usable as a library and a CLI.",
+  "type": "module",
+  "license": "MIT",
+  "author": "yukyu30",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yukyu30/fluorite.git"
+  },
+  "keywords": [
+    "frontmatter",
+    "markdown",
+    "yaml",
+    "validation",
+    "linter",
+    "cli"
+  ],
+  "bin": {
+    "fluorite": "./dist/cli.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "picocolors": "^1.1.1",
+    "tinyglobby": "^0.2.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
