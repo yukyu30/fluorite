@@ -18,7 +18,7 @@
     "cli"
   ],
   "bin": {
-    "fluorite": "./dist/cli.js"
+    "fluorite": "dist/cli.js"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

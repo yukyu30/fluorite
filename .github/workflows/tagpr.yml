@@ -62,6 +62,10 @@ jobs:
       - run: npm install -g npm@latest
       - run: npm ci
 
+      # Build before publish so dist/ (incl. the bin) exists when npm reads the
+      # manifest — avoids the "No bin file found at dist/cli.js" warning that the
+      # prepublishOnly-only build triggers on a fresh checkout.
+      - run: npm run build
+
       # No NPM_TOKEN: auth is via OIDC; provenance is generated automatically.
-      # `npm publish` runs the build via prepublishOnly.
       - run: npm publish --access public
