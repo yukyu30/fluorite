@@ -7,6 +7,7 @@ Markdown の **フロントマター** を、読みやすくチェーンでき�
 
 ```md
 ---
+date: 2026-06-07
 tags: ["ok", "ng"]
 title: "これはタイトルです"
 ---
@@ -17,6 +18,7 @@ import { check } from "@yukyu30/fluorite";
 
 const result = check(markdown, (fm) => {
   fm.key("title").required().type("string").lengthMin(10);
+  fm.key("date").required().isoDate(); // クォート無しの日付も文字列のまま → YYYY-MM-DD を検証
   fm.key("tags").not.has("ng"); // ← "ng" があるので失敗（赤）
 });
 
@@ -72,7 +74,7 @@ export default defineConfig({
   exclude: ["**/drafts/**"],
   rules: (fm) => {
     fm.key("title").required().type("string").lengthMin(10).lengthMax(70);
-    fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/);
+    fm.key("date").required().isoDate(); // YYYY-MM-DD（書かれた形式を検証）
     fm.key("description").required().lengthMin(50).lengthMax(160); // SEO に有効
     fm.key("draft").type("boolean");
   },
@@ -126,7 +128,7 @@ export default defineConfig({
     fm.key("status").required().oneOf(["draft", "review", "published"]);
 
     if (fm.data.status === "published") {
-      fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/);
+      fm.key("date").required().isoDate();
       fm.key("author").required().type("string");
       fm.key("description").required().lengthMin(50);
       fm.key("tags").not.has("wip"); // 作業中タグのまま公開させない
@@ -139,9 +141,18 @@ export default defineConfig({
 
 ```js
 fm.key("slug").required().matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/); // ケバブケース
-fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/); // ISO 日付
+fm.key("date").required().isoDate(); // YYYY-MM-DD のカレンダー日付
 fm.key("version").matches(/^\d+\.\d+\.\d+$/); // semver
 ```
+
+> **クォート無しの日付も文字列のまま保持されます。** YAML は通常
+> `date: 2026-06-07` を `Date` オブジェクトへ変換してしまい、どう書かれていたか
+> が失われて形式を検証できません。fluorite は `!!timestamp` を含まないスキーマで
+> フロントマターをパースし、日付を文字どおり文字列として保持します。そのため
+> `isoDate()`（あるいは単なる `matches(/^\d{4}-\d{2}-\d{2}$/)`）で、書かれた
+> `YYYY-MM-DD` 形式を、すべての値をクォートすることなく検証できます。時刻付き
+> （`2026-06-07 10:30:00`）や、あり得ない日付（`2026-02-30`）は失敗として
+> 報告されます。
 
 ### 5. プログラムからフロントマターをチェックする（SSG / ビルドスクリプト）
 
@@ -234,13 +245,15 @@ const result = check(source, (fm) => {
 **存在 / 型**
 
 - `required()` / `exists()` — キーが存在する
-- `type(t)` — `"string" | "number" | "boolean" | "array" | "object" | "null"`
+- `type(t)` — `"string" | "number" | "boolean" | "array" | "object" | "null" | "date"`
 
 **値**
 
 - `eq(value)` — 深い等価比較
 - `oneOf([...])` — 許可された集合のいずれか（enum）
 - `matches(regexp)` — 文字列がパターンに一致
+- `isoDate()` — 文字列が `YYYY-MM-DD` のカレンダー日付（時刻付きや
+  `2026-02-30` のようなあり得ない日付は弾く）
 
 **包含（配列・文字列）**
 
@@ -255,6 +268,7 @@ const result = check(source, (fm) => {
 - `each.oneOf([...])` — `subsetOf` と同じことを、要素ごとのアクセサ経由で
 - `each.type(t)` — すべての要素が型 `t`
 - `each.matches(regexp)` — すべての（文字列）要素がパターンに一致
+- `each.isoDate()` — すべての要素が `YYYY-MM-DD` の日付
 
 **長さ（配列・文字列）**
 
@@ -266,6 +280,7 @@ const result = check(source, (fm) => {
 check(source, (fm) => {
   fm.key("status").oneOf(["draft", "published"]);
   fm.key("slug").matches(/^[a-z0-9-]+$/);
+  fm.key("date").isoDate();
   fm.key("tags").type("array").hasAll(["blog"]).not.has("ng");
   fm.key("summary").lengthMin(20).lengthMax(160);
 });

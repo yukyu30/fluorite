@@ -59,6 +59,59 @@ describe("matches", () => {
   });
 });
 
+describe("isoDate", () => {
+  it("passes for a YYYY-MM-DD calendar date string", () => {
+    expect(run({ d: "2026-06-07" }, (fm) => fm.key("d").isoDate()).ok).toBe(true);
+  });
+  it("rejects a date-time string", () => {
+    expect(run({ d: "2026-06-07 10:30:00" }, (fm) => fm.key("d").isoDate()).ok).toBe(false);
+  });
+  it("rejects impossible calendar dates", () => {
+    expect(run({ d: "2026-02-30" }, (fm) => fm.key("d").isoDate()).ok).toBe(false);
+    expect(run({ d: "2026-13-01" }, (fm) => fm.key("d").isoDate()).ok).toBe(false);
+    expect(run({ d: "2026-00-10" }, (fm) => fm.key("d").isoDate()).ok).toBe(false);
+  });
+  it("rejects loosely-formatted dates", () => {
+    expect(run({ d: "2026-6-7" }, (fm) => fm.key("d").isoDate()).ok).toBe(false);
+    expect(run({ d: "06/07/2026" }, (fm) => fm.key("d").isoDate()).ok).toBe(false);
+  });
+  it("fails for a missing key, reporting undefined", () => {
+    const r = run({}, (fm) => fm.key("d").isoDate());
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]!.message).toContain("undefined");
+  });
+  it("fails for a Date object and names the date type", () => {
+    const r = run({ d: new Date("2026-06-07") }, (fm) => fm.key("d").isoDate());
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]!.message).toContain("date");
+  });
+  it("negation asserts the value is not a date", () => {
+    expect(run({ d: "nope" }, (fm) => fm.key("d").not.isoDate()).ok).toBe(true);
+    expect(run({ d: "2026-06-07" }, (fm) => fm.key("d").not.isoDate()).ok).toBe(false);
+  });
+});
+
+describe("type(date)", () => {
+  it("recognizes Date objects as the date type, not object", () => {
+    expect(run({ d: new Date() }, (fm) => fm.key("d").type("date")).ok).toBe(true);
+    expect(run({ d: new Date() }, (fm) => fm.key("d").type("object")).ok).toBe(false);
+  });
+});
+
+describe("each.isoDate", () => {
+  it("passes when every element is a YYYY-MM-DD date", () => {
+    expect(run({ d: ["2026-01-02", "2026-02-03"] }, (fm) => fm.key("d").each.isoDate()).ok).toBe(true);
+  });
+  it("fails and lists the invalid dates", () => {
+    const r = run({ d: ["2026-01-02", "2026-13-99"] }, (fm) => fm.key("d").each.isoDate());
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]!.message).toContain("2026-13-99");
+  });
+  it("fails on a non-array value", () => {
+    expect(run({ d: "2026-01-02" }, (fm) => fm.key("d").each.isoDate()).ok).toBe(false);
+  });
+});
+
 describe("has / hasAll / hasAny", () => {
   it("has works for arrays and substrings", () => {
     expect(run({ v: ["a", "b"] }, (fm) => fm.key("v").has("a")).ok).toBe(true);

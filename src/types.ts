@@ -5,7 +5,8 @@ export type ValueType =
   | "boolean"
   | "array"
   | "object"
-  | "null";
+  | "null"
+  | "date";
 
 /** Result of a single matcher invocation against one key. */
 export interface RuleResult {
