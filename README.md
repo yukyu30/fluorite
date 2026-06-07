@@ -1,5 +1,7 @@
 # fluorite
 
+**English** · [日本語](./README.ja.md)
+
 Inspect and validate Markdown **frontmatter** with a readable, chainable DSL —
 usable as a **library** and a **CLI**.
 
@@ -27,8 +29,170 @@ reason) so you can collect and report them as red/green.
 
 ## Install
 
+Requires **Node.js 18+**. The package ships both ESM and CommonJS builds with
+TypeScript types.
+
 ```sh
+# As a dev dependency — typical for linting in CI / pre-commit
+npm install -D @yukyu30/fluorite
+
+# As a runtime dependency — if you call the library at runtime
 npm install @yukyu30/fluorite
+```
+
+Other package managers:
+
+```sh
+pnpm add -D @yukyu30/fluorite
+yarn add -D @yukyu30/fluorite
+```
+
+Or run the CLI without installing:
+
+```sh
+npx @yukyu30/fluorite check "docs/**/*.md"
+```
+
+## Use cases
+
+Concrete recipes for the things people reach for fluorite to do. The matcher
+vocabulary used here is documented in full under [Library API](#library-api).
+
+### 1. Lint blog / docs frontmatter in CI
+
+Keep every post's frontmatter consistent and fail the build when it drifts.
+Put the rules in a config file and wire `fluorite check` into your pipeline.
+
+```js
+// fluorite.config.mjs
+import { defineConfig } from "@yukyu30/fluorite";
+
+export default defineConfig({
+  include: ["content/**/*.md"],
+  exclude: ["**/drafts/**"],
+  rules: (fm) => {
+    fm.key("title").required().type("string").lengthMin(10).lengthMax(70);
+    fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/);
+    fm.key("description").required().lengthMin(50).lengthMax(160); // good for SEO
+    fm.key("draft").type("boolean");
+  },
+});
+```
+
+```jsonc
+// package.json
+{
+  "scripts": {
+    "lint:content": "fluorite check"
+  }
+}
+```
+
+```yaml
+# .github/workflows/content.yml
+- run: npm ci
+- run: npm run lint:content # exits 1 on any failure → red CI
+```
+
+### 2. Catch tag typos & enforce a tag vocabulary
+
+Tags drift fast (`Blog` vs `blog`, a stray `ng`). Pin the canonical set and
+fluorite names the exact offending values, or enforce a notation rule instead.
+
+```js
+const TAGS = ["release", "blog", "news", "guide"];
+
+export default defineConfig({
+  rules: (fm) => {
+    fm.key("tags").required().type("array").subsetOf(TAGS);
+    // tags: ["blog", "New", "ng"]
+    // → all items should be one of [...] (invalid: ["New","ng"])
+  },
+});
+
+// …or don't maintain a list — just require lowercase kebab-case:
+fm.key("tags").each.matches(/^[a-z0-9-]+$/);
+```
+
+### 3. Enforce a publish workflow with conditional rules
+
+The rule set is just a function, and `fm.data` is the parsed frontmatter — so
+you can apply stricter rules only once a post is marked published.
+
+```js
+export default defineConfig({
+  rules: (fm) => {
+    fm.key("status").required().oneOf(["draft", "review", "published"]);
+
+    if (fm.data.status === "published") {
+      fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/);
+      fm.key("author").required().type("string");
+      fm.key("description").required().lengthMin(50);
+      fm.key("tags").not.has("wip"); // can't ship a work-in-progress tag
+    }
+  },
+});
+```
+
+### 4. Validate identifiers, slugs & dates with patterns
+
+```js
+fm.key("slug").required().matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/); // kebab-case
+fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/); // ISO date
+fm.key("version").matches(/^\d+\.\d+\.\d+$/); // semver
+```
+
+### 5. Check frontmatter programmatically (SSG / build script)
+
+Use the library directly when you generate a site or want a custom report.
+`check` never throws — it returns a result you can collect.
+
+```ts
+import { readFile } from "node:fs/promises";
+import { glob } from "tinyglobby";
+import { check } from "@yukyu30/fluorite";
+
+const failed: string[] = [];
+for (const file of await glob("content/**/*.md")) {
+  const result = check(await readFile(file, "utf8"), (fm) => {
+    fm.key("title").required().lengthMin(10);
+    fm.key("tags").type("array").subsetOf(["blog", "news"]);
+  });
+
+  if (!result.ok) {
+    failed.push(file);
+    for (const f of result.failures) {
+      console.error(`${file} → ${f.key}: ${f.message}`);
+    }
+  }
+}
+if (failed.length) process.exit(1);
+```
+
+### 6. Validate data that isn't Markdown (CMS / API payloads)
+
+Already have the object parsed? Skip the Markdown step with `checkData` — handy
+for content coming from a headless CMS, an API, or a YAML/JSON loader.
+
+```ts
+import { checkData } from "@yukyu30/fluorite";
+
+const entry = await cms.getEntry("home"); // { title, tags, ... }
+const result = checkData(entry, (fm) => {
+  fm.key("title").required().type("string");
+  fm.key("tags").subsetOf(["featured", "evergreen"]);
+});
+```
+
+### 7. Block bad frontmatter before it lands (pre-commit)
+
+```jsonc
+// package.json — with lint-staged + husky
+{
+  "lint-staged": {
+    "content/**/*.md": "fluorite check"
+  }
+}
 ```
 
 ## Library API
@@ -170,6 +334,20 @@ export default defineConfig({
 
 Positional patterns on the CLI override `include`. If neither is given,
 `**/*.md` is used.
+
+## Development
+
+```sh
+npm test          # run the test suite (vitest)
+npm run coverage  # run with a coverage report (v8)
+npm run typecheck # tsc --noEmit
+npm run build     # bundle to dist/ with tsup
+```
+
+The suite covers the matcher DSL (every matcher, its `.not` form, and the
+`each.*` accessor), frontmatter parsing, the aggregate `check` / `checkData`
+results, config loading, the report formatter, and the CLI — both in-process
+and by running the built `dist/cli.js` end-to-end.
 
 ## Releasing
 

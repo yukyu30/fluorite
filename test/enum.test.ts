@@ -65,4 +65,42 @@ describe("each — per-element matchers", () => {
   it("each on a non-array fails", () => {
     expect(run({ tags: "ok" }, (fm) => fm.key("tags").each.oneOf(ALLOWED)).ok).toBe(false);
   });
+
+  it("reports the offending elements in the message", () => {
+    const r = run({ tags: ["ok", "nope", "BLOG"] }, (fm) => fm.key("tags").each.oneOf(ALLOWED));
+    expect(r.failures[0]!.message).toContain("nope");
+    expect(r.failures[0]!.message).toContain("BLOG");
+  });
+});
+
+describe("each — negation", () => {
+  it("each.not.oneOf passes when no element is in the set", () => {
+    expect(run({ tags: ["x", "y"] }, (fm) => fm.key("tags").each.not.oneOf(ALLOWED)).ok).toBe(true);
+    expect(run({ tags: ["ok"] }, (fm) => fm.key("tags").each.not.oneOf(ALLOWED)).ok).toBe(false);
+  });
+
+  it("each.not.type passes when no element is of the type", () => {
+    expect(run({ tags: [1, 2] }, (fm) => fm.key("tags").each.not.type("string")).ok).toBe(true);
+    expect(run({ tags: ["a"] }, (fm) => fm.key("tags").each.not.type("string")).ok).toBe(false);
+  });
+
+  it("each.not.matches passes when no element matches", () => {
+    const kebab = /^[a-z0-9-]+$/;
+    expect(run({ tags: ["A", "B"] }, (fm) => fm.key("tags").each.not.matches(kebab)).ok).toBe(true);
+    expect(run({ tags: ["ok"] }, (fm) => fm.key("tags").each.not.matches(kebab)).ok).toBe(false);
+  });
+
+  it(".not before .each propagates the negation into each", () => {
+    expect(run({ tags: ["x", "y"] }, (fm) => fm.key("tags").not.each.oneOf(ALLOWED)).ok).toBe(true);
+  });
+
+  it("a non-array fails even when negated (can never satisfy per-element)", () => {
+    expect(run({ tags: "ok" }, (fm) => fm.key("tags").each.not.oneOf(ALLOWED)).ok).toBe(false);
+  });
+
+  it("each on a missing key fails and records no value", () => {
+    const r = run({}, (fm) => fm.key("tags").each.oneOf(ALLOWED));
+    expect(r.ok).toBe(false);
+    expect(r.results[0]!.value).toBeUndefined();
+  });
 });

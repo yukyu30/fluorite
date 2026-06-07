@@ -15,6 +15,12 @@ describe("required / exists", () => {
     expect(run({}, (fm) => fm.key("a").not.required()).ok).toBe(true);
     expect(run({ a: 1 }, (fm) => fm.key("a").not.required()).ok).toBe(false);
   });
+  it("exists() mirrors required() with its own wording", () => {
+    expect(run({ a: 1 }, (fm) => fm.key("a").exists()).ok).toBe(true);
+    const r = run({}, (fm) => fm.key("a").exists());
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]!.message).toBe("should exist");
+  });
 });
 
 describe("type", () => {
@@ -87,6 +93,10 @@ describe("length / lengthMin / lengthMax", () => {
     expect(run({ v: 42 }, (fm) => fm.key("v").lengthMin(1)).ok).toBe(false);
     expect(run({}, (fm) => fm.key("v").lengthMin(1)).ok).toBe(false);
   });
+  it("reports n/a for length / lengthMax on non-measurable values", () => {
+    expect(run({}, (fm) => fm.key("v").length(3)).failures[0]!.message).toContain("n/a");
+    expect(run({ v: 1 }, (fm) => fm.key("v").lengthMax(3)).failures[0]!.message).toContain("n/a");
+  });
 });
 
 describe(".not applies only to the next matcher", () => {
@@ -99,5 +109,118 @@ describe(".not applies only to the next matcher", () => {
       ["has", true, true],
       ["has", false, true],
     ]);
+  });
+});
+
+describe("negation of every matcher", () => {
+  it("not.exists", () => {
+    expect(run({}, (fm) => fm.key("a").not.exists()).ok).toBe(true);
+    expect(run({ a: 1 }, (fm) => fm.key("a").not.exists()).ok).toBe(false);
+  });
+  it("not.type", () => {
+    expect(run({ v: 1 }, (fm) => fm.key("v").not.type("string")).ok).toBe(true);
+    expect(run({ v: "x" }, (fm) => fm.key("v").not.type("string")).ok).toBe(false);
+  });
+  it("not.eq", () => {
+    expect(run({ v: 1 }, (fm) => fm.key("v").not.eq(2)).ok).toBe(true);
+    expect(run({ v: 1 }, (fm) => fm.key("v").not.eq(1)).ok).toBe(false);
+  });
+  it("not.oneOf", () => {
+    expect(run({ v: "z" }, (fm) => fm.key("v").not.oneOf(["a", "b"])).ok).toBe(true);
+    expect(run({ v: "a" }, (fm) => fm.key("v").not.oneOf(["a", "b"])).ok).toBe(false);
+  });
+  it("not.matches", () => {
+    expect(run({ v: "abc" }, (fm) => fm.key("v").not.matches(/^\d+$/)).ok).toBe(true);
+    expect(run({ v: "123" }, (fm) => fm.key("v").not.matches(/^\d+$/)).ok).toBe(false);
+  });
+  it("not.hasAll / not.hasAny", () => {
+    expect(run({ v: ["a"] }, (fm) => fm.key("v").not.hasAll(["a", "b"])).ok).toBe(true);
+    expect(run({ v: ["a", "b"] }, (fm) => fm.key("v").not.hasAll(["a", "b"])).ok).toBe(false);
+    expect(run({ v: ["x"] }, (fm) => fm.key("v").not.hasAny(["a", "b"])).ok).toBe(true);
+    expect(run({ v: ["a"] }, (fm) => fm.key("v").not.hasAny(["a", "b"])).ok).toBe(false);
+  });
+  it("not.length / not.lengthMin / not.lengthMax", () => {
+    expect(run({ v: "ab" }, (fm) => fm.key("v").not.length(3)).ok).toBe(true);
+    expect(run({ v: "abc" }, (fm) => fm.key("v").not.length(3)).ok).toBe(false);
+    expect(run({ v: "ab" }, (fm) => fm.key("v").not.lengthMin(3)).ok).toBe(true);
+    expect(run({ v: "abcd" }, (fm) => fm.key("v").not.lengthMax(3)).ok).toBe(true);
+  });
+
+  it("negated length matchers on a non-measurable value report n/a", () => {
+    const min = run({}, (fm) => fm.key("v").not.lengthMin(1));
+    expect(min.ok).toBe(true);
+    expect(min.results[0]!.message).toContain("n/a");
+    const max = run({}, (fm) => fm.key("v").not.lengthMax(1));
+    expect(max.ok).toBe(true);
+    expect(max.results[0]!.message).toContain("n/a");
+    const exact = run({}, (fm) => fm.key("v").not.length(3));
+    expect(exact.results[0]!.message).toContain("n/a");
+  });
+});
+
+describe("has / hasAll / hasAny on strings (substring containment)", () => {
+  it("hasAll matches every substring", () => {
+    expect(run({ v: "hello world" }, (fm) => fm.key("v").hasAll(["hello", "world"])).ok).toBe(true);
+    expect(run({ v: "hello" }, (fm) => fm.key("v").hasAll(["hello", "world"])).ok).toBe(false);
+  });
+  it("hasAny matches at least one substring", () => {
+    expect(run({ v: "hello" }, (fm) => fm.key("v").hasAny(["zzz", "ell"])).ok).toBe(true);
+  });
+  it("containment fails when the container is neither array nor string", () => {
+    expect(run({ v: 42 }, (fm) => fm.key("v").hasAll(["4"])).ok).toBe(false);
+    expect(run({ v: 42 }, (fm) => fm.key("v").hasAny(["4"])).ok).toBe(false);
+  });
+});
+
+describe("eq deep equality over objects", () => {
+  it("compares nested objects structurally", () => {
+    expect(run({ v: { a: 1, b: { c: 2 } } }, (fm) => fm.key("v").eq({ a: 1, b: { c: 2 } })).ok).toBe(true);
+  });
+  it("fails when key counts differ", () => {
+    expect(run({ v: { a: 1 } }, (fm) => fm.key("v").eq({ a: 1, b: 2 })).ok).toBe(false);
+  });
+  it("fails when a value differs", () => {
+    expect(run({ v: { a: 1 } }, (fm) => fm.key("v").eq({ a: 2 })).ok).toBe(false);
+  });
+  it("fails when arrays differ in length", () => {
+    expect(run({ v: [1] }, (fm) => fm.key("v").eq([1, 2])).ok).toBe(false);
+  });
+  it("compares against undefined without crashing", () => {
+    const r = run({}, (fm) => fm.key("v").eq(undefined));
+    expect(r.failures[0]!.message).toContain("undefined");
+  });
+  it("treats an object and an array as unequal", () => {
+    expect(run({ v: { 0: "a" } }, (fm) => fm.key("v").eq(["a"])).ok).toBe(false);
+  });
+  it("treats null and an object as unequal", () => {
+    expect(run({ v: null }, (fm) => fm.key("v").eq({})).ok).toBe(false);
+    expect(run({ v: {} }, (fm) => fm.key("v").eq(null)).ok).toBe(false);
+  });
+  it("oneOf matches an object member deeply", () => {
+    expect(run({ v: { a: 1 } }, (fm) => fm.key("v").oneOf([{ a: 1 }, { b: 2 }])).ok).toBe(true);
+  });
+});
+
+describe("type() edge cases", () => {
+  it("distinguishes null from object", () => {
+    expect(run({ v: null }, (fm) => fm.key("v").type("null")).ok).toBe(true);
+    expect(run({ v: null }, (fm) => fm.key("v").type("object")).ok).toBe(false);
+  });
+  it("a missing key is reported as type undefined", () => {
+    const r = run({}, (fm) => fm.key("v").type("string"));
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]!.message).toContain("undefined");
+  });
+  it("an unsupported runtime value is neither a known type", () => {
+    expect(run({ v: (() => 1) as unknown }, (fm) => fm.key("v").type("object")).ok).toBe(false);
+  });
+});
+
+describe("display() tolerance", () => {
+  it("falls back to String() for values JSON cannot serialize", () => {
+    // A BigInt argument makes JSON.stringify throw inside the message builder.
+    const r = run({ v: ["x"] }, (fm) => fm.key("v").has(1n as unknown));
+    expect(r.ok).toBe(false);
+    expect(r.failures[0]!.message).toContain("1");
   });
 });
