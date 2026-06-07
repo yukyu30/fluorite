@@ -3,6 +3,7 @@
 ## [v0.1.1](https://github.com/yukyu30/fluorite/compare/v0.1.0...v0.1.1) - 2026-06-07
 
 - Expand test coverage to ~100% and document use cases by @yukyu30 in https://github.com/yukyu30/fluorite/pull/6
+- Fix npm publish stripping the fluorite bin by @yukyu30 in https://github.com/yukyu30/fluorite/pull/8
 
 ## [v0.1.0](https://github.com/yukyu30/fluorite/commits/v0.1.0) - 2026-06-06
 
