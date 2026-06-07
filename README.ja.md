@@ -7,6 +7,7 @@ Markdown の **フロントマター** を、読みやすくチェーンでき�
 
 ```md
 ---
+date: 2026-06-07
 tags: ["ok", "ng"]
 title: "これはタイトルです"
 ---
@@ -17,6 +18,7 @@ import { check } from "@yukyu30/fluorite";
 
 const result = check(markdown, (fm) => {
   fm.key("title").required().type("string").lengthMin(10);
+  fm.key("date").required().isoDate(); // クォート無しの日付も文字列のまま → YYYY-MM-DD を検証
   fm.key("tags").not.has("ng"); // ← "ng" があるので失敗（赤）
 });
 
@@ -278,6 +280,7 @@ const result = check(source, (fm) => {
 check(source, (fm) => {
   fm.key("status").oneOf(["draft", "published"]);
   fm.key("slug").matches(/^[a-z0-9-]+$/);
+  fm.key("date").isoDate();
   fm.key("tags").type("array").hasAll(["blog"]).not.has("ng");
   fm.key("summary").lengthMin(20).lengthMax(160);
 });

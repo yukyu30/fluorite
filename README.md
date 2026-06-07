@@ -7,6 +7,7 @@ usable as a **library** and a **CLI**.
 
 ```md
 ---
+date: 2026-06-07
 tags: ["ok", "ng"]
 title: "これはタイトルです"
 ---
@@ -17,6 +18,7 @@ import { check } from "@yukyu30/fluorite";
 
 const result = check(markdown, (fm) => {
   fm.key("title").required().type("string").lengthMin(10);
+  fm.key("date").required().isoDate(); // unquoted YAML dates stay strings → validated as YYYY-MM-DD
   fm.key("tags").not.has("ng"); // ← fails (red) because "ng" is present
 });
 
@@ -276,6 +278,7 @@ next** matcher, then resets.
 check(source, (fm) => {
   fm.key("status").oneOf(["draft", "published"]);
   fm.key("slug").matches(/^[a-z0-9-]+$/);
+  fm.key("date").isoDate();
   fm.key("tags").type("array").hasAll(["blog"]).not.has("ng");
   fm.key("summary").lengthMin(20).lengthMax(160);
 });
