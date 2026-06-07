@@ -29,8 +29,28 @@ reason) so you can collect and report them as red/green.
 
 ## Install
 
+Requires **Node.js 18+**. The package ships both ESM and CommonJS builds with
+TypeScript types.
+
 ```sh
+# As a dev dependency — typical for linting in CI / pre-commit
+npm install -D @yukyu30/fluorite
+
+# As a runtime dependency — if you call the library at runtime
 npm install @yukyu30/fluorite
+```
+
+Other package managers:
+
+```sh
+pnpm add -D @yukyu30/fluorite
+yarn add -D @yukyu30/fluorite
+```
+
+Or run the CLI without installing:
+
+```sh
+npx @yukyu30/fluorite check "docs/**/*.md"
 ```
 
 ## Use cases

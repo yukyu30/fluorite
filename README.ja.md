@@ -29,8 +29,28 @@ result.failures; // [{ key: "tags", rule: "has", negated: true, ok: false, ... }
 
 ## インストール
 
+**Node.js 18 以上** が必要です。パッケージは ESM と CommonJS の両ビルドと
+TypeScript 型定義を同梱しています。
+
 ```sh
+# 開発依存として — CI / pre-commit での lint 用途で一般的
+npm install -D @yukyu30/fluorite
+
+# 実行時依存として — ライブラリを実行時に呼び出す場合
 npm install @yukyu30/fluorite
+```
+
+他のパッケージマネージャ:
+
+```sh
+pnpm add -D @yukyu30/fluorite
+yarn add -D @yukyu30/fluorite
+```
+
+インストールせずに CLI を実行:
+
+```sh
+npx @yukyu30/fluorite check "docs/**/*.md"
 ```
 
 ## ユースケース
