@@ -7,6 +7,7 @@ const MISSING = Symbol("missing");
 function valueType(value: unknown): ValueType | "undefined" {
   if (value === MISSING) return "undefined";
   if (value === null) return "null";
+  if (value instanceof Date) return "date";
   if (Array.isArray(value)) return "array";
   const t = typeof value;
   if (t === "string" || t === "number" || t === "boolean" || t === "object") {
@@ -210,6 +211,33 @@ export class KeyAssertion {
     );
   }
 
+  /**
+   * Assert the value is a calendar date written as `YYYY-MM-DD`.
+   *
+   * fluorite keeps unquoted YAML dates as strings (see {@link parseFrontmatter}),
+   * so this checks the written form exactly: a full timestamp
+   * (`2026-06-07 10:30:00`), a loosely-padded date (`2026-6-7`), or an
+   * impossible date (`2026-02-30`) all fail.
+   *
+   * ```ts
+   * fm.key("date").required().isoDate();
+   * ```
+   */
+  isoDate(): this {
+    const v = this.resolved;
+    const pass = typeof v === "string" && isCalendarDate(v);
+    return this.record(
+      "isoDate",
+      pass,
+      (neg) =>
+        neg
+          ? `should not be a YYYY-MM-DD date`
+          : `should be a YYYY-MM-DD date (was ${
+              typeof v === "string" ? display(v) : valueType(v)
+            })`,
+    );
+  }
+
   /** Assert an array contains `item`, or a string contains the substring. */
   has(item: unknown): this {
     const v = this.resolved;
@@ -395,6 +423,42 @@ export class EachAssertion {
       pattern.source,
     );
   }
+
+  /** Every element must be a `YYYY-MM-DD` calendar date string. */
+  isoDate(): this {
+    return this.record(
+      "isoDate",
+      (el) => typeof el === "string" && isCalendarDate(el),
+      (neg, invalid, isArray) =>
+        !isArray
+          ? `should be an array of YYYY-MM-DD dates`
+          : neg
+            ? `every item should not be a YYYY-MM-DD date`
+            : `every item should be a YYYY-MM-DD date${invalid.length ? ` (invalid: ${display(invalid)})` : ""}`,
+    );
+  }
+}
+
+/**
+ * True only for a string that is a real calendar date in `YYYY-MM-DD` form.
+ *
+ * The four-then-two-then-two digit shape is required (so `2026-6-7` fails), and
+ * the round-trip through {@link Date.UTC} rejects impossible dates such as
+ * `2026-02-30` or `2026-13-01` (which would otherwise roll over to a valid
+ * day in the next month/year).
+ */
+function isCalendarDate(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return false;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  return (
+    dt.getUTCFullYear() === year &&
+    dt.getUTCMonth() === month - 1 &&
+    dt.getUTCDate() === day
+  );
 }
 
 function contains(container: unknown, item: unknown): boolean {

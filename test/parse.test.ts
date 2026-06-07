@@ -38,4 +38,26 @@ describe("parseFrontmatter", () => {
     expect(r.content).toContain("# Heading");
     expect(r.content).toContain("text");
   });
+
+  it("keeps an unquoted date as a YYYY-MM-DD string, not a Date", () => {
+    const r = parseFrontmatter(`---\ndate: 2026-06-07\n---\nbody`);
+    expect(r.data.date).toBe("2026-06-07");
+    expect(typeof r.data.date).toBe("string");
+    expect(r.data.date instanceof Date).toBe(false);
+  });
+
+  it("keeps an unquoted date-time value verbatim", () => {
+    const r = parseFrontmatter(`---\nstamp: 2026-06-07 10:30:00\n---\nbody`);
+    expect(r.data.stamp).toBe("2026-06-07 10:30:00");
+  });
+
+  it("keeps arrays of dates as strings", () => {
+    const r = parseFrontmatter(`---\ndates:\n  - 2026-01-02\n  - 2026-02-03\n---\nbody`);
+    expect(r.data.dates).toEqual(["2026-01-02", "2026-02-03"]);
+  });
+
+  it("still parses booleans, numbers and null", () => {
+    const r = parseFrontmatter(`---\ndraft: true\nn: 42\nempty: null\n---\nbody`);
+    expect(r.data).toEqual({ draft: true, n: 42, empty: null });
+  });
 });

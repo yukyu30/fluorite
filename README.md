@@ -72,7 +72,7 @@ export default defineConfig({
   exclude: ["**/drafts/**"],
   rules: (fm) => {
     fm.key("title").required().type("string").lengthMin(10).lengthMax(70);
-    fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/);
+    fm.key("date").required().isoDate(); // YYYY-MM-DD, written form validated
     fm.key("description").required().lengthMin(50).lengthMax(160); // good for SEO
     fm.key("draft").type("boolean");
   },
@@ -125,7 +125,7 @@ export default defineConfig({
     fm.key("status").required().oneOf(["draft", "review", "published"]);
 
     if (fm.data.status === "published") {
-      fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/);
+      fm.key("date").required().isoDate();
       fm.key("author").required().type("string");
       fm.key("description").required().lengthMin(50);
       fm.key("tags").not.has("wip"); // can't ship a work-in-progress tag
@@ -138,9 +138,17 @@ export default defineConfig({
 
 ```js
 fm.key("slug").required().matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/); // kebab-case
-fm.key("date").required().matches(/^\d{4}-\d{2}-\d{2}$/); // ISO date
+fm.key("date").required().isoDate(); // YYYY-MM-DD calendar date
 fm.key("version").matches(/^\d+\.\d+\.\d+$/); // semver
 ```
+
+> **Unquoted dates stay strings.** YAML normally coerces `date: 2026-06-07`
+> into a `Date` object, which erases how it was written and makes the format
+> impossible to lint. fluorite parses frontmatter with a schema that keeps
+> dates verbatim, so `isoDate()` — or a plain `matches(/^\d{4}-\d{2}-\d{2}$/)`
+> — validates the written `YYYY-MM-DD` form with no need to quote every value.
+> A full timestamp (`2026-06-07 10:30:00`) or an impossible date
+> (`2026-02-30`) is reported as a failure.
 
 ### 5. Check frontmatter programmatically (SSG / build script)
 
@@ -233,13 +241,15 @@ next** matcher, then resets.
 **Existence / type**
 
 - `required()` / `exists()` — the key is present
-- `type(t)` — `"string" | "number" | "boolean" | "array" | "object" | "null"`
+- `type(t)` — `"string" | "number" | "boolean" | "array" | "object" | "null" | "date"`
 
 **Value**
 
 - `eq(value)` — deep-equality
 - `oneOf([...])` — value is one of the allowed set (enum)
 - `matches(regexp)` — string matches the pattern
+- `isoDate()` — string is a `YYYY-MM-DD` calendar date (rejects timestamps &
+  impossible dates like `2026-02-30`)
 
 **Containment (arrays & strings)**
 
@@ -254,6 +264,7 @@ next** matcher, then resets.
 - `each.oneOf([...])` — same as `subsetOf`, via the per-element accessor
 - `each.type(t)` — every element is of type `t`
 - `each.matches(regexp)` — every (string) element matches the pattern
+- `each.isoDate()` — every element is a `YYYY-MM-DD` date
 
 **Length (arrays & strings)**
 
