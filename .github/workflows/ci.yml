@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# Cancel superseded runs for the same ref (e.g. rapid pushes to a PR).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Validate the whole supported range (package.json: engines.node >=18).
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      # Build before testing so the CLI end-to-end test finds dist/cli.js.
+      - run: npm run build
+      - run: npm test
