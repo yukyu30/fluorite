@@ -1,6 +1,6 @@
 {
   "name": "@yukyu30/fluorite",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Inspect and validate Markdown frontmatter with a readable, chainable DSL — usable as a library and a CLI.",
   "type": "module",
   "license": "MIT",
